@@ -1,0 +1,27 @@
+# 核心依赖
+langchain
+langchain-core
+langchain-community
+
+# 向量存储
+faiss-cpu
+
+# 文本处理
+markdown
+
+# API客户端
+requests
+
+# 环境变量管理
+python-dotenv
+
+# 工具集成
+tavily-python
+
+# 测试
+pytest
+
+# 开发工具
+black
+flake8
+isort
