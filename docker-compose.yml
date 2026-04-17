@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  backend:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+      - BAILIAN_API_KEY=your_api_key_here
+      - BAILIAN_API_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
+      - VECTOR_STORE_PATH=data/vector_db
+      - KNOWLEDGE_BASE_PATH=data/knowledge
+    volumes:
+      - ./data:/app/data
+      - ./config:/app/config
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.frontend
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://backend:8000
+    depends_on:
+      - backend

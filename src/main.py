@@ -19,8 +19,12 @@ class AgentRAG:
         # 加载配置
         self.bailian_api_key = os.getenv('BAILIAN_API_KEY')
         self.bailian_api_url = os.getenv('BAILIAN_API_URL')
-        self.vector_store_path = os.getenv('VECTOR_STORE_PATH', 'data/vector_db')
-        self.knowledge_base_path = os.getenv('KNOWLEDGE_BASE_PATH', 'data/knowledge')
+        
+        # 使用绝对路径
+        base_dir = os.path.dirname(os.path.dirname(__file__))
+        self.vector_store_path = os.getenv('VECTOR_STORE_PATH', os.path.join(base_dir, 'data', 'vector_db'))
+        self.knowledge_base_path = os.getenv('KNOWLEDGE_BASE_PATH', os.path.join(base_dir, 'data', 'knowledge'))
+        
         self.model_name = os.getenv('MODEL_NAME', 'qwen-turbo')
         self.top_k = int(os.getenv('TOP_K', 5))
         self.chunk_size = int(os.getenv('CHUNK_SIZE', 1000))

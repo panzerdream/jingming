@@ -1,15 +1,13 @@
 <template>
   <div class="app-container">
     <div class="stardew-header">
-      <h1>星露谷助手</h1>
+      <h1>星露谷百事通</h1>
     </div>
     
     <div class="chat-container">
       <div class="chat-messages" ref="chatMessages">
         <div v-for="(message, index) in messages" :key="index" :class="['message', message.sender]">
-          <div class="message-content">
-            {{ message.content }}
-          </div>
+          <div class="message-content" v-html="message.content"></div>
         </div>
         <div v-if="loading" class="message bot">
           <div class="message-content">
@@ -25,7 +23,7 @@
       <div class="chat-input">
         <input 
           v-model="inputMessage" 
-          @keyup.enter="sendMessage" 
+          @keydown.enter.prevent="$event.shiftKey ? null : sendMessage()" 
           placeholder="输入你的问题..."
           :disabled="loading"
         />
@@ -78,8 +76,8 @@ export default {
       this.loading = true
       
       try {
-        // 发送请求到后端
-        const response = await fetch('http://localhost:8000/api/query', {
+        // 发送请求到后端（使用相对路径，通过 Vite 代理）
+        const response = await fetch('/api/query', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
@@ -91,13 +89,31 @@ export default {
           throw new Error('API请求失败')
         }
         
-        const data = await response.json()
+        // 处理流式响应
+        const reader = response.body.getReader()
+        const decoder = new TextDecoder()
         
-        // 添加机器人回复
+        // 添加机器人消息占位符
+        const botMessageIndex = this.messages.length
         this.messages.push({
           sender: 'bot',
-          content: data.response
+          content: ''
         })
+        
+        // 逐步接收数据
+        let accumulatedContent = ''
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          
+          const chunk = decoder.decode(value, { stream: true })
+          accumulatedContent += chunk
+          
+          // 更新机器人消息
+          this.messages[botMessageIndex].content = accumulatedContent
+          this.scrollToBottom()
+        }
+        
       } catch (error) {
         console.error('发送消息失败:', error)
         this.messages.push({
@@ -115,8 +131,8 @@ export default {
       if (this.loading) return
       
       try {
-        // 发送请求到后端清空会话
-        const response = await fetch('http://localhost:8000/api/clear', {
+        // 发送请求到后端清空会话（使用相对路径，通过 Vite 代理）
+        const response = await fetch('/api/clear', {
           method: 'POST'
         })
         
@@ -150,31 +166,55 @@ export default {
 </script>
 
 <style scoped>
+/* 全局样式 */
+* {
+  font-family: 'Noto Sans SC', 'Press Start 2P', sans-serif;
+  font-weight: normal;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
 .app-container {
-  font-family: 'Press Start 2P', cursive;
   background-color: #8B4513;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
   align-items: center;
   padding: 20px;
+  /* 像素风格效果 */
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+/* 为中文字符添加像素风格 */
+.message-content {
+  text-rendering: optimizeSpeed;
+  -webkit-font-smoothing: none;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 .stardew-header {
   background-color: #556B2F;
   color: #FFF8DC;
-  padding: 20px;
-  border: 4px solid #8B4513;
-  border-radius: 8px;
+  padding: 15px 30px;
+  border: 2px solid #8B4513;
+  border-radius: 4px;
   margin-bottom: 20px;
-  box-shadow: 0 4px 0 #2F4F4F;
+  box-shadow: 0 2px 0 #2F4F4F;
 }
 
 .stardew-header h1 {
   font-size: 24px;
   margin: 0;
   text-align: center;
-  text-shadow: 2px 2px 0 #000;
+  font-weight: bold;
+  font-family: 'Press Start 2P', 'Noto Sans SC', sans-serif;
+  text-rendering: optimizeSpeed;
+  -webkit-font-smoothing: none;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 .chat-container {
@@ -218,8 +258,10 @@ export default {
 
 .message-content {
   font-size: 14px;
-  line-height: 1.4;
+  line-height: 1.5;
   word-wrap: break-word;
+  text-align: left;
+  white-space: normal;
 }
 
 .loading {
@@ -266,8 +308,7 @@ export default {
   padding: 10px;
   border: 2px solid #8B4513;
   border-radius: 4px;
-  font-family: 'Press Start 2P', cursive;
-  font-size: 12px;
+  font-size: 14px;
   background-color: #FFF8DC;
   box-shadow: inset 0 2px 0 #2F4F4F;
 }
@@ -277,8 +318,7 @@ export default {
   padding: 10px 15px;
   border: 2px solid #8B4513;
   border-radius: 4px;
-  font-family: 'Press Start 2P', cursive;
-  font-size: 12px;
+  font-size: 14px;
   background-color: #556B2F;
   color: #FFF8DC;
   cursor: pointer;
