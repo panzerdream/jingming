@@ -18,6 +18,10 @@ python-dotenv
 # 工具集成
 tavily-python
 
+# 混合检索
+transformers
+rank-bm25
+
 # 测试
 pytest
 
@@ -25,3 +29,6 @@ pytest
 black
 flake8
 isort
+
+# 监控和日志
+psutil>=5.9.0

@@ -10,7 +10,7 @@ import asyncio
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
 
-from src.main_optimized import OptimizedAgentRAG as AgentRAG
+from src.main import AgentRAG
 
 app = FastAPI()
 

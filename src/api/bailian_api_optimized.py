@@ -64,17 +64,14 @@ class OptimizedBailianAPI:
             "content": optimized_prompt
         })
         
-        # 更激进的优化参数
+        # 优化3: 调整参数以加快响应
         payload = {
             "model": model_name,
             "messages": messages,
-            "max_tokens": int(os.getenv("MAX_RESPONSE_TOKENS", "150")),  # 进一步减少
-            "temperature": float(os.getenv("TEMPERATURE", "0.2")),  # 进一步降低
+            "temperature": temperature,  # 降低温度以获得更确定的回答
+            "max_tokens": min(max_tokens, 500),  # 限制最大token数
             "stream": False
         }
-        
-        # 更短的超时时间
-        timeout = int(os.getenv("API_TIMEOUT", "20"))
         
         logger.debug(f"Optimized API call to {api_url}, model: {model_name}, prompt length: {len(optimized_prompt)}")
         start_time = time.time()
@@ -85,16 +82,9 @@ class OptimizedBailianAPI:
                 api_url,
                 headers=self.headers,
                 data=json.dumps(payload),
-                timeout=timeout  # 使用配置的超时时间
+                timeout=15  # 从30秒减少到15秒
             )
             response_time = time.time() - start_time
-            
-            # 严格超时检查：即使requests没有抛出异常，如果响应时间超过超时设置，也视为超时
-            if response_time > timeout:
-                logger.warning(f"API响应时间超过超时设置 ({response_time:.2f}s > {timeout}s)，使用快速回复", 
-                             api_url=api_url, response_time=response_time, timeout=timeout)
-                metrics.record_api_call(api_url, response.status_code, response_time, success=False)
-                return self._get_fallback_response(prompt)
             
             response.raise_for_status()
             result = response.json()
@@ -109,7 +99,7 @@ class OptimizedBailianAPI:
             
         except requests.exceptions.Timeout:
             response_time = time.time() - start_time
-            logger.warning(f"API调用超时 ({timeout}s)，使用快速回复", api_url=api_url, response_time=response_time)
+            logger.warning(f"API调用超时 (15s)，使用快速回复", api_url=api_url, response_time=response_time)
             return self._get_fallback_response(prompt)
             
         except requests.RequestException as e:
@@ -134,37 +124,16 @@ class OptimizedBailianAPI:
         # 优化5: 压缩上下文，只保留最相关的部分
         compressed_context = self._compress_context(context, max_length=800)
         
-        # 检查是否包含工具结果
-        if "工具执行结果:" in compressed_context:
-            # 使用工具专用的系统消息
-            system_message = "你是星露谷导游景明。用户使用了计算工具，工具执行结果是数字。请直接回答：'根据计算，结果是X。'其中X是工具结果中的数字。不要添加其他内容。"
-            logger.debug(f"检测到工具结果，使用专用系统消息")
-        else:
-            # 优化6: 使用更清晰的系统消息
-            system_message = "你是星露谷导游景明。请基于提供的相关信息回答问题。如果信息中有答案，请直接回答。如果没有答案，请说'抱歉，我不知道这个问题的答案。'。不要提及'你整理的资料'。"
-            logger.debug(f"未检测到工具结果，使用通用系统消息")
+        # 优化6: 使用更简洁的系统消息
+        system_message = "你是星露谷导游景明。请用1-3句话简洁回答，保持热情但简短。"
         
-        logger.debug(f"压缩后的上下文内容：\n{compressed_context[:500]}...")
-        
-        # 优化7: 使用更清晰的提示模板
-        if "工具执行结果:" in compressed_context:
-            # 工具查询的提示模板
-            prompt = f"""工具执行结果：
-{compressed_context.split('工具执行结果:')[1].strip()}
-
-问题：{query}
-
-回答："""
-        else:
-            # 普通查询的提示模板 - 简化版本
-            prompt = f"""基于以下信息回答问题：
-
-相关信息：
+        # 优化7: 使用更简洁的提示模板
+        prompt = f"""信息：
 {compressed_context}
 
 问题：{query}
 
-回答："""
+请简洁回答："""
         
         logger.debug(f"Optimized context generation, query: '{query[:30]}...', context length: {len(compressed_context)}")
         
@@ -182,34 +151,6 @@ class OptimizedBailianAPI:
         """压缩上下文，保留关键信息"""
         if len(context) <= max_length:
             return context
-        
-        # 检查是否包含工具结果
-        tool_result_marker = "工具执行结果:"
-        if tool_result_marker in context:
-            # 优先保留工具结果部分
-            marker_index = context.find(tool_result_marker)
-            
-            # 计算工具结果部分需要保留的长度
-            # 工具结果部分通常不长，我们保留标记后的200个字符
-            tool_result_section = context[marker_index:marker_index + 300]  # 标记+结果
-            
-            # 剩余长度用于其他上下文
-            remaining_length = max_length - len(tool_result_section) - 20  # 留一些空间给分隔符
-            
-            if remaining_length > 100:
-                # 从开头取一部分上下文
-                start_part = context[:remaining_length // 2]
-                end_part = context[-remaining_length // 2:] if len(context) > remaining_length // 2 else ""
-                
-                compressed = f"{start_part}\n...\n{tool_result_section}"
-                if end_part:
-                    compressed += f"\n...\n{end_part}"
-            else:
-                # 如果空间不够，只保留工具结果
-                compressed = tool_result_section
-            
-            logger.debug(f"上下文从 {len(context)} 字符压缩到 {len(compressed)} 字符（保留工具结果）")
-            return compressed
         
         # 简单压缩策略：取开头和结尾部分
         half = max_length // 2

@@ -89,14 +89,30 @@ export default {
           throw new Error('API请求失败')
         }
         
-        // 读取响应文本（非流式）
-        const responseText = await response.text()
+        // 处理流式响应
+        const reader = response.body.getReader()
+        const decoder = new TextDecoder()
         
-        // 添加机器人消息
+        // 添加机器人消息占位符
+        const botMessageIndex = this.messages.length
         this.messages.push({
           sender: 'bot',
-          content: responseText
+          content: ''
         })
+        
+        // 逐步接收数据
+        let accumulatedContent = ''
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          
+          const chunk = decoder.decode(value, { stream: true })
+          accumulatedContent += chunk
+          
+          // 更新机器人消息
+          this.messages[botMessageIndex].content = accumulatedContent
+          this.scrollToBottom()
+        }
         
       } catch (error) {
         console.error('发送消息失败:', error)

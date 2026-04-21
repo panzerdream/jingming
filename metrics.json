@@ -1,0 +1,34 @@
+{
+  "summary": {
+    "uptime_seconds": 1.0090970993041992,
+    "query_stats": {
+      "total_queries": 0,
+      "latency_stats": {
+        "count": 0,
+        "avg": 0,
+        "min": 0,
+        "max": 0
+      }
+    },
+    "tool_usage": {},
+    "errors": {},
+    "system_metrics": {
+      "cpu_percent": 2.2,
+      "memory_percent": 60.1,
+      "memory_used_gb": 11.682235717773438,
+      "memory_total_gb": 24.0,
+      "disk_percent": 1.6,
+      "disk_used_gb": 11.693008422851562,
+      "disk_total_gb": 926.3028907775879,
+      "timestamp": "2026-04-21T11:46:36.387659"
+    },
+    "timestamp": "2026-04-21T11:46:36.387685"
+  },
+  "app_metrics": {
+    "query_count": 0,
+    "query_latency": [],
+    "tool_usage": {},
+    "errors": {}
+  },
+  "timestamp": "2026-04-21T11:46:36.387693"
+}
