@@ -131,22 +131,28 @@ class OptimizedBailianAPI:
     def generate_with_context(self, query: str, context: str, model_name: str, 
                              temperature: float = 0.3, max_tokens: int = 300) -> str:
         """优化版的带上下文文本生成"""
-        # 优化5: 压缩上下文，只保留最相关的部分
-        compressed_context = self._compress_context(context, max_length=800)
+        # 优化 5: 压缩上下文，但保留更多信息
+        compressed_context = self._compress_context(context, max_length=1200)
         
         # 检查是否包含工具结果
         if "工具执行结果:" in compressed_context:
             # 使用工具专用的系统消息
-            system_message = "你是星露谷导游景明。用户使用了计算工具，工具执行结果是数字。请直接回答：'根据计算，结果是X。'其中X是工具结果中的数字。不要添加其他内容。"
+            system_message = "你是星露谷导游景明。用户使用了计算工具，工具执行结果是数字。请直接回答结果，并做简要说明。"
             logger.debug(f"检测到工具结果，使用专用系统消息")
         else:
-            # 优化6: 使用更清晰的系统消息
-            system_message = "你是星露谷导游景明。请基于提供的相关信息回答问题。如果信息中有答案，请直接回答。如果没有答案，请说'抱歉，我不知道这个问题的答案。'。不要提及'你整理的资料'。"
+            # 优化 6: 使用更清晰的系统消息，不暴露检索过程
+            system_message = """你是星露谷导游景明，对星露谷物语了如指掌。
+- 请直接、自然地回答问题，就像你在和朋友聊天一样
+- 不要提及"资料"、"信息"、"检索"、"查询"等词汇
+- 不要说"根据提供的信息"、"在我整理的资料中"这类话
+- 如果知道答案，就直接回答，好像这是你的知识一样
+- 如果不知道，就友好地说不知道
+- 回答要完整，控制在 200 字以内，确保话说完"""
             logger.debug(f"未检测到工具结果，使用通用系统消息")
         
         logger.debug(f"压缩后的上下文内容：\n{compressed_context[:500]}...")
         
-        # 优化7: 使用更清晰的提示模板
+        # 优化 7: 使用更自然的提示模板，不暴露检索过程
         if "工具执行结果:" in compressed_context:
             # 工具查询的提示模板
             prompt = f"""工具执行结果：
@@ -156,10 +162,8 @@ class OptimizedBailianAPI:
 
 回答："""
         else:
-            # 普通查询的提示模板 - 简化版本
-            prompt = f"""基于以下信息回答问题：
-
-相关信息：
+            # 普通查询的提示模板 - 自然对话版本
+            prompt = f"""参考内容：
 {compressed_context}
 
 问题：{query}

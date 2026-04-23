@@ -123,6 +123,42 @@ class VectorStoreManager:
             logger.info("No existing vector store, creating new one")
             self.create_vector_store(documents)
     
+    def add_document(self, document):
+        """添加单个文档到向量存储
+        
+        Args:
+            document: LangChain Document 对象
+            
+        Returns:
+            bool: 添加成功返回 True
+        """
+        try:
+            logger.info(f"Adding single document to vector store")
+            
+            if not self.vector_store:
+                self.load_vector_store()
+            
+            if self.vector_store:
+                # 使用 add_documents 方法添加单个文档
+                self.vector_store.add_documents([document])
+                self.save_vector_store()
+                
+                if self.bm25_available:
+                    # 重新构建 BM25 索引
+                    self._build_bm25_index(self.documents + [document])
+                
+                logger.info("Single document added successfully")
+                return True
+            else:
+                # 如果没有现有向量存储，创建新的
+                logger.info("No existing vector store, creating new one")
+                self.create_vector_store([document])
+                return True
+                
+        except Exception as e:
+            logger.error(f"Failed to add single document: {e}")
+            return False
+    
     def _build_bm25_index(self, documents):
         """构建BM25索引"""
         if not self.bm25_available:

@@ -5,8 +5,7 @@ import json
 import requests
 from typing import Dict, Any, List, Optional, Tuple
 from datetime import datetime, timedelta
-from langchain.tools import Tool
-from langchain.agents import Tool as LangChainTool
+from langchain_core.tools import Tool
 
 from utils.logger import get_logger
 from utils.monitor import get_metrics_collector

@@ -32,3 +32,12 @@ isort
 
 # 监控和日志
 psutil>=5.9.0
+
+# Redis 支持（短期记忆）
+redis>=4.5.0
+hiredis>=2.2.0
+
+# GraphRAG 支持（知识图谱）
+networkx>=3.0
+graphviz>=0.20
+neo4j>=5.0
